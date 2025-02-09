@@ -10,7 +10,7 @@ router.route('/')
 
 // Route to update order status (PUT) - Requires verification token and admin access
 router.route('/:orderId')
-    .put(verifyToken, allowedTo('ADMIN'), orderController.updateOrderStatus) // Update order status action
+    .put(verifyToken, allowedTo('ADMIN','DELIVERY'), orderController.updateOrderStatus) // Update order status action
 
 // Route to get all orders by status (GET) - Requires verification token and admin access
 router.route('/:status')

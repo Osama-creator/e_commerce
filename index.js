@@ -27,12 +27,13 @@ const categoriesRouter = require('./routes/admin/categoreRotue');
 const unitRouter = require('./routes/admin/unit_route');
 const productRouter = require('./routes/admin/productRoute');
 const orderRouter = require('./routes/orderRoute');
-
+const copounRouter = require('./routes/copounRoute');
 app.use('/api/categories', categoriesRouter)
 app.use('/api/products', productRouter)
 app.use('/api/units', unitRouter)
 app.use('/api/users', usersRouter) 
 app.use('/api/orders', orderRouter)
+app.use('/api/coupons', copounRouter)
 
 
 // global middleware for not found router

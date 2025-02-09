@@ -111,6 +111,18 @@ const getAllDeleviry = asyncWrapper(async (req, res) => {
     const users = await User.find({role: 'DELEVIRY'}, {"__v": false, 'password': false}).limit(limit).skip(skip);
     res.json({ status: httpStatusText.SUCCESS, data: {delivery: users}});
 })
+const ChangeUserStatus = asyncWrapper(async (req, res, next) => {
+    const { userId } = req.params;
+    const { isEnabled } = req.body;
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'DELEVIRY') {
+        const error = appError.create('DELEVIRY not found', 400, httpStatusText.FAIL);
+        return next(error);
+    }
+    user.isEnabled = isEnabled;
+    await user.save();
+    res.status(200).json({ status: httpStatusText.SUCCESS, data: { user } });
+})
 // Delete user account
 const deleteUser = asyncWrapper(async (req, res, next) => {
     const { userId } = req.params;
@@ -144,5 +156,6 @@ module.exports = {
     register,
     login,
     updateUser,
-    deleteUser
+    deleteUser,
+    ChangeUserStatus
 };

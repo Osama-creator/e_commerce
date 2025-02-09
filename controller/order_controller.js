@@ -4,22 +4,20 @@ const Product = require('../models/admin/product_model');
 const User = require('../models/user_model');
 const appError = require('../utils/appError');
 const httpStatusText = require('../utils/httpStatusText');
-
+const copounController = require('../controller/copoun_controller');
 const createOrder = asyncWrapper(async (req, res, next) => {
-    const { products } = req.body;
+    const { products, couponCode } = req.body;
     const userId = req.currentUser.user_id;
-
+    
     // Validate input
     if (!products || !Array.isArray(products) || products.length === 0 || !products.every(item => item.quantity > 0)) {
-        const error = appError.create('Invalid input data', 400, httpStatusText.FAIL);
-        return next(error);
+        return next(appError.create('Invalid input data', 400, httpStatusText.FAIL));
     }
 
     // Get user details
     const user = await User.findById(userId).select("firstName lastName phone avatar address");
     if (!user) {
-        const error = appError.create('User not found', 404, httpStatusText.FAIL);
-        return next(error);
+        return next(appError.create('User not found', 404, httpStatusText.FAIL));
     }
 
     // Calculate total price and decrease product stock
@@ -27,29 +25,39 @@ const createOrder = asyncWrapper(async (req, res, next) => {
     for (const item of products) {
         const product = await Product.findById(item.product);
         if (!product) {
-            const error = appError.create(`Product not found: ${item.product}`, 404, httpStatusText.FAIL);
-            return next(error);
+            return next(appError.create(`Product not found: ${item.product}`, 404, httpStatusText.FAIL));
         }
         if (product.stock < item.quantity) {
-            const error = appError.create(`Insufficient stock for product: ${product.name}`, 400, httpStatusText.FAIL);
-            return next(error);
+            return next(appError.create(`Insufficient stock for product: ${product.name}`, 400, httpStatusText.FAIL));
         }
         totalPrice += product.price * item.quantity;
-        product.stock -= item.quantity; // Decrease stock
+        product.stock -= item.quantity;
         await product.save();
     }
 
-    // Create the order and store user details
+    // Apply coupon if provided
+    let discount = 0;
+    let appliedCoupon = null;
+    if (couponCode) {
+        try {
+            discount = await copounController.applyCoupon(couponCode, totalPrice, userId);
+            appliedCoupon = couponCode;
+        } catch (error) {
+            console.warn(`⚠️ Coupon error: ${error.message}`); // Log the coupon error but continue
+        }
+    }
+    // Create the order
     const order = new Order({
         user: userId,
-        userDetails: {  // NEW: Store user details
+        userDetails: {
             name: `${user.firstName} ${user.lastName}`,
             phone: user.phone,
             avatar: user.avatar,
             address: user.address
         },
         products,
-        totalPrice,
+        totalPrice: totalPrice - discount,
+        couponUsed: couponCode || null,
         status: 'pending'
     });
 
@@ -60,6 +68,7 @@ const createOrder = asyncWrapper(async (req, res, next) => {
         data: { order }
     });
 });
+
 const assignDelivery = asyncWrapper(async (req, res, next) => {
     const { orderId } = req.params;
     const { deliveryId } = req.body;

@@ -45,6 +45,10 @@ const orderSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
+    },
+    couponUsed : {
+        type: String,
+        default: null
     }
 });
 

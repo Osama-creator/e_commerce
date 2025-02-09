@@ -4,14 +4,142 @@ const appError = require('../../utils/appError');
 const httpStatusText = require('../../utils/httpStatusText');
 const Unit = require('../../models/admin/unit_model');
 const Category = require('../../models/admin/category_model');
-
+const User = require('../../models/user_model');
 // Get products by categoryId
-const getProductsByCategoryId = asyncWrapper(async (req, res , next) => {
+const getProductsByCategoryId = asyncWrapper(async (req, res, next) => {
     const { categoryId } = req.params;
     const products = await Product.find({ category: categoryId });
     res.json({ status: httpStatusText.SUCCESS, data: { products } });
 });
+// Search all products
+const getSearchProducts = asyncWrapper(async (req, res, next) => {
+    const { query } = req.query;
+    let filter = {};
 
+    if (query) {
+        filter = {
+            name: { $regex: query, $options: "i" }
+        };
+    }
+
+    console.log("🧐 Filter:", filter); // ✅ Check filter before querying DB
+
+    const products = await Product.find(filter);
+
+    if (!products.length) {
+        console.log("⚠️ No products found with filter:", filter); // ✅ Log when no products found
+        const error = appError.create('No products found', 400, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    console.log("✅ Products found:", products.length); // ✅ Log the count of products found
+
+    // Return the actual products found in the database
+    res.status(200).json({
+        status: "success",
+        data: {
+            products: products
+        }
+    });
+});
+
+
+// Search products by category
+const searchProductsByCategory = asyncWrapper(async (req, res, next) => {
+    const { categoryId } = req.params;
+    const { query } = req.query;
+
+    if (!query) {
+        return res.status(400).json({ status: httpStatusText.FAIL, message: "Search query is required" });
+    }
+
+    const products = await Product.find({
+        category: categoryId,
+        name: { $regex: query, $options: "i" }
+    });
+
+    res.json({ status: httpStatusText.SUCCESS, data: { products } });
+});
+const addToWishlist = asyncWrapper(async (req, res, next) => {
+    const { userId } = req.params;
+    const { productId } = req.body;
+
+    // Check if the user is authorized
+    const currentUserId = req.currentUser.user_id;
+
+    console.log(currentUserId);
+    console.log(userId);
+    if (userId !== currentUserId) {
+        const error = appError.create('Unauthorized action', 403, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    // Find the user and update their wishlist
+    const user = await User.findByIdAndUpdate(
+        userId,
+        { $addToSet: { wishlist: productId } },
+        { new: true }
+    );
+
+    if (!user) {
+        const error = appError.create('User not found', 404, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    res.status(200).json({
+        status: httpStatusText.SUCCESS,
+        data: { wishlist: user.wishlist }
+    });
+});
+const removeFromWishlist = asyncWrapper(async (req, res, next) => {
+    const { userId, productId } = req.params;
+
+    // Check if the user is authorized
+    if (userId !== req.currentUser.user_id) {
+        const error = appError.create('Unauthorized action', 403, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    // Find the user and update their wishlist
+    const user = await User.findByIdAndUpdate(
+        userId,
+        { $pull: { wishlist: productId } },
+        { new: true }
+    );
+
+    if (!user) {
+        const error = appError.create('User not found', 404, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    res.status(200).json({
+        status: httpStatusText.SUCCESS,
+        data: { wishlist: user.wishlist }
+    });
+});
+const getWishlist = asyncWrapper(async (req, res, next) => {
+    const { userId } = req.params;
+
+    // Check if the user is authorized
+    if (userId !== req.currentUser.user_id) {
+        const error = appError.create('Unauthorized action', 403, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    const user = await User.findById(userId).populate({
+        path: 'wishlist',
+        select: '-__v' // Exclude the __v field from the product documents
+    });
+    if (!user) {
+        const error = appError.create('User not found', 404, httpStatusText.FAIL);
+        return next(error);
+    }
+
+    res.status(200).json({
+        status: httpStatusText.SUCCESS,
+        data: { wishlist: user.wishlist }
+    });
+});
 // Add product
 const addProduct = asyncWrapper(async (req, res, next) => {
     const { name, description, price, categoryId, stock, unitId } = req.body;
@@ -73,7 +201,7 @@ const updateProduct = asyncWrapper(async (req, res, next) => {
         return next(error);
     }
 
-    
+
     // Update the product with the provided values
     product.name = name || product.name;
     product.description = description || product.description;
@@ -111,11 +239,13 @@ const deleteProduct = asyncWrapper(async (req, res, next) => {
     }
 
     // Delete the product
-    await product.deleteOne( { _id: productId } );
+    await product.deleteOne({ _id: productId });
     res.json({
         status: httpStatusText.SUCCESS,
         message: 'Product deleted successfully'
     });
 });
 
-module.exports = { getProductsByCategoryId,addProduct,getProductById, updateProduct, deleteProduct };
+module.exports = { addToWishlist, removeFromWishlist, getWishlist,
+     getSearchProducts, searchProductsByCategory, getProductsByCategoryId,
+      addProduct, getProductById, updateProduct, deleteProduct };

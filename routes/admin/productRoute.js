@@ -37,9 +37,20 @@ const verifyToken = require('../../middleware/verfiyToken');
 router.route('/')
     .post(verifyToken, allowedTo('ADMIN'), upload.single('image'), productController.addProduct);
 router.route('/:categoryId')    
-    .get(verifyToken, allowedTo('ADMIN'), productController.getProductsByCategoryId);
+    .get(verifyToken, productController.getProductsByCategoryId);
 router.route('/:productId')    
-    .get(verifyToken, allowedTo('ADMIN'), productController.getProductById)
+    .get(verifyToken,  productController.getProductById)
     .put(verifyToken, allowedTo('ADMIN'), upload.single('image'), productController.updateProduct)
     .delete(verifyToken, allowedTo('ADMIN'), productController.deleteProduct);
+router.route('/search/searchAllProducts')
+    .get(productController.getSearchProducts);
+router.route('/search/:categoryId')
+    .get(verifyToken, productController.searchProductsByCategory);
+// Wishlist routes
+router.route('/:userId/wishlist')
+    .get(verifyToken, productController.getWishlist) // Get user's wishlist
+    .post(verifyToken, productController.addToWishlist); // Add product to wishlist
+
+router.route('/:userId/wishlist/:productId')
+    .delete(verifyToken, productController.removeFromWishlist); // Remove product from wishlist
 module.exports = router;

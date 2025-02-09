@@ -38,6 +38,8 @@ const usersController = require('../controller/user_controller')
 const verifyToken = require('../middleware/verfiyToken');
 router.route('/')
     .get(verifyToken,allowedTo('ADMIN'),usersController.getAllUsers)
+router.route('/deleviryman')
+    .get(verifyToken,allowedTo('ADMIN'),usersController.getAllDeleviry)
 router.route('/register')
     .post( upload.single('avatar'),usersController.register);
 router.route('/login')

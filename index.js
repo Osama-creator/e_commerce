@@ -17,16 +17,23 @@ mongoose.connect(url).then(() => {
 
 app.use(cors())
 app.use(express.json());
+app.use((req, res, next) => {
+    console.log(`🟢 Received ${req.method} request at ${req.url}`);
+    next();
+});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const usersRouter = require('./routes/userRoute');
 const categoriesRouter = require('./routes/admin/categoreRotue');
 const unitRouter = require('./routes/admin/unit_route');
 const productRouter = require('./routes/admin/productRoute');
+const orderRouter = require('./routes/orderRoute');
 
 app.use('/api/categories', categoriesRouter)
 app.use('/api/products', productRouter)
 app.use('/api/units', unitRouter)
 app.use('/api/users', usersRouter) 
+app.use('/api/orders', orderRouter)
+
 
 // global middleware for not found router
 app.all('*', (req, res, next) => {

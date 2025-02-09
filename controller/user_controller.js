@@ -66,7 +66,7 @@ const login = asyncWrapper(async (req, res, next) => {
     if (user && matchedPassword) {
         // logged in successfully
         const token = await generateJWT({ email: user.email, id: user._id, role: user.role });
-        return res.json({ status: httpStatusText.SUCCESS, data: { token } });
+        return res.json({ status: httpStatusText.SUCCESS, data: { user, token } });
     } else {
         const error = appError.create('invalid credentials', 401, httpStatusText.ERROR);
         return next(error);
@@ -102,6 +102,15 @@ const updateUser = asyncWrapper(async (req, res, next) => {
         data: { user: updatedUser },
     });
 });
+const getAllDeleviry = asyncWrapper(async (req, res) => {
+    const query = req.query;
+    const limit = query.limit || 10;
+    const page = query.page || 1;
+    const skip = (page - 1) * limit;
+    // get all courses) from DB using Course Model
+    const users = await User.find({role: 'DELEVIRY'}, {"__v": false, 'password': false}).limit(limit).skip(skip);
+    res.json({ status: httpStatusText.SUCCESS, data: {delivery: users}});
+})
 // Delete user account
 const deleteUser = asyncWrapper(async (req, res, next) => {
     const { userId } = req.params;
@@ -130,6 +139,7 @@ const deleteUser = asyncWrapper(async (req, res, next) => {
 });
 
 module.exports = {
+    getAllDeleviry,
     getAllUsers,
     register,
     login,

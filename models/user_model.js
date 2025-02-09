@@ -38,7 +38,13 @@ const userSchema = new mongoose.Schema({
     avatar: {
         type: String,
         default: 'uploads/profile.png'
-    }
+    },
+    address: {
+        type: String,
+        default: 'egypt'
+    },
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }] // Add this field
+
 
 })
 
